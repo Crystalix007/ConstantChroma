@@ -13,23 +13,33 @@ array<Mat, 3> getHistograms(const Mat &img);
 array<Mat, 3> getCumulativeHistograms(const Mat &img);
 array<array<uint16_t, 256>, 3> getLUT(const Mat &img, const array<Mat, 3> &refCumHist);
 Mat doLUT(const string &filename, const array<Mat, 3> &refCumHist);
+string getFilename(const size_t index);
+
+//Edit these values here
+const constexpr size_t digitCount    = 5;
+const constexpr size_t startFrame    = 1;
+const constexpr size_t frameCount    = 20505;
+const           string framePrefix   = "Frame";
+const           string frameExt      = ".png";
+
+//Path must exist
+const           string processedPath = "processed/"; //Must end in '/'
 
 int main()
 {
-	const constexpr size_t digitCount = 5;
-	const constexpr size_t frameCount = 20505;
-	auto refHistos = getCumulativeHistograms(imread("Frame00001.png", IMREAD_COLOR));
+	auto refImg    = imread(getFilename(startFrame), IMREAD_COLOR);
+	auto refHistos = getCumulativeHistograms(refImg);
 
-	for (size_t i = 2; i < frameCount; i++)
+	//Write out the reference image first
+	imwrite(processedPath + getFilename(startFrame), refImg);
+
+	for (size_t i = startFrame + 1; i < startFrame + frameCount; i++)
 	{
 		clog << "Processing frame: " << i << endl;
-		string filename{ "Frame" };
-		string numeric{ to_string(i) };
-
-		filename += string(digitCount - numeric.size(), '0') + numeric + ".png";
+		string filename = getFilename(i);
 
 		const auto lutted = doLUT(filename, refHistos);
-		imwrite("processed/" + filename, lutted);
+		imwrite(processedPath + filename, lutted);
 	}
 
 	return 0;
@@ -128,4 +138,17 @@ Mat doLUT(const string &filename, const array<Mat, 3> &refCumHist)
 	}
 
 	return img;
+}
+
+string getFilename(const size_t index)
+{
+		string filename{ framePrefix };
+		string numeric{ to_string(index) };
+
+		if (numeric.size() > digitCount)
+			throw runtime_error{ "Invalid digit count specified" };
+
+		filename += string(digitCount - numeric.size(), '0') + numeric + frameExt;
+
+		return filename;
 }
